@@ -170,20 +170,38 @@ export default function TechRadar() {
         >
           <div className="flex items-center gap-2">
             <div
-              className={`w-2 h-2 rounded-full ${loading ? "bg-yellow-500 animate-pulse" : "bg-green-500 animate-pulse"}`}
+              className={`w-2 h-2 rounded-full ${
+                loading
+                  ? "bg-yellow-500 animate-pulse"
+                  : error
+                    ? "bg-orange-500 animate-pulse"
+                    : "bg-green-500 animate-pulse"
+              }`}
             />
             <span
-              className={`text-xs font-semibold ${loading ? "text-yellow-400" : "text-green-400"}`}
+              className={`text-xs font-semibold ${
+                loading
+                  ? "text-yellow-400"
+                  : error
+                    ? "text-orange-400"
+                    : "text-green-400"
+              }`}
             >
-              {loading ? "CONNECTING..." : "LIVE DATA"}
+              {loading ? "LOADING..." : error ? "DEMO MODE" : "SYSTEM READY"}
             </span>
           </div>
           <p className="text-gray-300 text-xs mt-1">
             {loading
-              ? "Fetching latest intelligence..."
-              : "Real-time global tech news"}
+              ? "Initializing TechRadar..."
+              : error
+                ? "Using simulated intelligence data"
+                : `${alerts.length} alerts monitoring global tech`}
           </p>
-          {error && <p className="text-red-400 text-xs mt-1">{error}</p>}
+          {error && (
+            <p className="text-orange-400 text-xs mt-1">
+              Webhook connection pending
+            </p>
+          )}
         </motion.div>
       </div>
 
