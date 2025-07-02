@@ -29,11 +29,33 @@ export const handleNewsProxy: RequestHandler = async (req, res) => {
       const errorText = await response.text();
       console.error("Webhook error response:", errorText);
 
+      // Try to parse the error response to provide better feedback
+      let parsedError;
+      try {
+        parsedError = JSON.parse(errorText);
+      } catch (e) {
+        parsedError = { message: errorText };
+      }
+
+      // Check if it's a webhook registration issue
+      if (
+        response.status === 404 &&
+        parsedError.message?.includes("not registered")
+      ) {
+        return res.status(404).json({
+          error: "N8N Webhook Not Active",
+          message: "The webhook is in test mode and needs to be activated",
+          hint: "Click 'Execute workflow' button in n8n, then refresh this page",
+          status: response.status,
+          webhookDetails: parsedError,
+        });
+      }
+
       return res.status(response.status).json({
         error: "Webhook request failed",
         status: response.status,
         statusText: response.statusText,
-        webhookResponse: errorText,
+        webhookResponse: parsedError,
         webhookUrl: NEWS_WEBHOOK_URL,
       });
     }

@@ -191,21 +191,29 @@ export default function TechRadar() {
             >
               {loading
                 ? "CONNECTING..."
-                : error
-                  ? "DATABASE ERROR"
-                  : "LIVE DATABASE"}
+                : error?.includes("activation")
+                  ? "WEBHOOK INACTIVE"
+                  : error
+                    ? "DATABASE ERROR"
+                    : "LIVE DATABASE"}
             </span>
           </div>
           <p className="text-gray-300 text-xs mt-1">
             {loading
               ? "Connecting to database..."
-              : error
-                ? "Failed to connect to database"
-                : `${alerts.length} live alerts from database`}
+              : error?.includes("activation")
+                ? "N8N workflow needs to be activated"
+                : error
+                  ? "Failed to connect to database"
+                  : `${alerts.length} live alerts from database`}
           </p>
           {error && (
-            <p className="text-red-400 text-xs mt-1">
-              Check database connection
+            <p
+              className={`text-xs mt-1 ${error.includes("activation") ? "text-orange-400" : "text-red-400"}`}
+            >
+              {error.includes("activation")
+                ? "Click 'Execute workflow' in n8n then refresh"
+                : "Check database connection"}
             </p>
           )}
         </motion.div>
