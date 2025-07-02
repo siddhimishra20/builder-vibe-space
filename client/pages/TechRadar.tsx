@@ -58,6 +58,44 @@ const mockAlerts: NewsAlert[] = [
     timestamp: new Date(Date.now() - 600000),
     impact: "Opportunity for ADNOC to explore energy storage partnerships",
   },
+  {
+    id: "4",
+    headline: "China's Quantum Computing Milestone",
+    source: "South China Morning Post",
+    category: "AI",
+    summary: "New quantum processor achieves 1000-qubit breakthrough",
+    location: { lat: 39.9042, lng: 116.4074 },
+    city: "Beijing",
+    country: "China",
+    timestamp: new Date(Date.now() - 900000),
+    impact:
+      "Critical advancement in computational capabilities affecting global tech landscape",
+  },
+  {
+    id: "5",
+    headline: "Norway's Offshore Wind Revolution",
+    source: "Energy Voice",
+    category: "Energy Tech",
+    summary: "World's largest floating wind farm begins operations",
+    location: { lat: 59.9139, lng: 10.7522 },
+    city: "Oslo",
+    country: "Norway",
+    timestamp: new Date(Date.now() - 1200000),
+    impact: "Potential for ADNOC to explore floating offshore wind technology",
+  },
+  {
+    id: "6",
+    headline: "India's Solar Manufacturing Expansion",
+    source: "Economic Times",
+    category: "Energy Tech",
+    summary: "₹50,000 crore investment in solar panel production announced",
+    location: { lat: 28.6139, lng: 77.209 },
+    city: "New Delhi",
+    country: "India",
+    timestamp: new Date(Date.now() - 1500000),
+    impact:
+      "Opportunity for renewable energy partnerships and technology transfer",
+  },
 ];
 
 export default function TechRadar() {
