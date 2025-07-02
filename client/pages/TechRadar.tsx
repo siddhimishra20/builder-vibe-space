@@ -5,6 +5,7 @@ import WorldMap from "../components/tech-radar/WorldMap";
 import NewsCard from "../components/tech-radar/NewsCard";
 import ChatBox from "../components/tech-radar/ChatBox";
 import AlertSystem from "../components/tech-radar/AlertSystem";
+import newsService from "../services/newsService";
 
 interface NewsAlert {
   id: string;
@@ -17,112 +18,104 @@ interface NewsAlert {
   country: string;
   timestamp: Date;
   impact: string;
+  relevance_score?: number;
+  keywords?: string[];
+  url?: string;
 }
-
-const mockAlerts: NewsAlert[] = [
-  {
-    id: "1",
-    headline: "Microsoft Announces Major AI Infrastructure Investment",
-    source: "Reuters",
-    category: "AI",
-    summary: "Microsoft commits $20B to new AI data centers across Europe",
-    location: { lat: 52.52, lng: 13.405 },
-    city: "Berlin",
-    country: "Germany",
-    timestamp: new Date(),
-    impact:
-      "Potential partnership opportunities for ADNOC's digital transformation initiatives",
-  },
-  {
-    id: "2",
-    headline: "Saudi Arabia Launches New Green Hydrogen Initiative",
-    source: "Bloomberg",
-    category: "Energy Tech",
-    summary: "NEOM announces $8.5B green hydrogen facility",
-    location: { lat: 24.7136, lng: 46.6753 },
-    city: "Riyadh",
-    country: "Saudi Arabia",
-    timestamp: new Date(Date.now() - 300000),
-    impact:
-      "Direct competition in renewable energy sector - strategic response needed",
-  },
-  {
-    id: "3",
-    headline: "Tesla's New Battery Technology Breakthrough",
-    source: "TechCrunch",
-    category: "Energy Storage",
-    summary: "New lithium-metal batteries promise 50% more capacity",
-    location: { lat: 37.7749, lng: -122.4194 },
-    city: "San Francisco",
-    country: "USA",
-    timestamp: new Date(Date.now() - 600000),
-    impact: "Opportunity for ADNOC to explore energy storage partnerships",
-  },
-  {
-    id: "4",
-    headline: "China's Quantum Computing Milestone",
-    source: "South China Morning Post",
-    category: "AI",
-    summary: "New quantum processor achieves 1000-qubit breakthrough",
-    location: { lat: 39.9042, lng: 116.4074 },
-    city: "Beijing",
-    country: "China",
-    timestamp: new Date(Date.now() - 900000),
-    impact:
-      "Critical advancement in computational capabilities affecting global tech landscape",
-  },
-  {
-    id: "5",
-    headline: "Norway's Offshore Wind Revolution",
-    source: "Energy Voice",
-    category: "Energy Tech",
-    summary: "World's largest floating wind farm begins operations",
-    location: { lat: 59.9139, lng: 10.7522 },
-    city: "Oslo",
-    country: "Norway",
-    timestamp: new Date(Date.now() - 1200000),
-    impact: "Potential for ADNOC to explore floating offshore wind technology",
-  },
-  {
-    id: "6",
-    headline: "India's Solar Manufacturing Expansion",
-    source: "Economic Times",
-    category: "Energy Tech",
-    summary: "₹50,000 crore investment in solar panel production announced",
-    location: { lat: 28.6139, lng: 77.209 },
-    city: "New Delhi",
-    country: "India",
-    timestamp: new Date(Date.now() - 1500000),
-    impact:
-      "Opportunity for renewable energy partnerships and technology transfer",
-  },
-];
 
 export default function TechRadar() {
   const [alerts, setAlerts] = useState<NewsAlert[]>([]);
   const [activeAlert, setActiveAlert] = useState<NewsAlert | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const transformNewsItemToAlert = (newsItem: any): NewsAlert => ({
+    id: newsItem.id,
+    headline: newsItem.headline,
+    source: newsItem.source,
+    category: newsItem.category,
+    summary: newsItem.summary,
+    location: { lat: newsItem.location.lat, lng: newsItem.location.lng },
+    city: newsItem.location.city,
+    country: newsItem.location.country,
+    timestamp: new Date(newsItem.timestamp),
+    impact: newsItem.impact || "",
+    relevance_score: newsItem.relevance_score,
+    keywords: newsItem.keywords,
+    url: newsItem.url,
+  });
+
+  const fetchLatestNews = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const newsData = await newsService.fetchLatestNews();
+      const transformedAlerts = newsData.map(transformNewsItemToAlert);
+
+      setAlerts(transformedAlerts);
+
+      // If there are alerts, show the first one as active
+      if (transformedAlerts.length > 0) {
+        setActiveAlert(transformedAlerts[0]);
+        setTimeout(() => setActiveAlert(null), 5000);
+      }
+    } catch (err) {
+      console.error("Error fetching news:", err);
+      setError("Failed to load latest news");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const enhanceAlertWithImpact = async (alert: NewsAlert) => {
+    if (!alert.impact) {
+      try {
+        const impact = await newsService.getImpactAnalysis(alert);
+        setAlerts((prev) =>
+          prev.map((a) => (a.id === alert.id ? { ...a, impact } : a)),
+        );
+      } catch (err) {
+        console.error("Error getting impact analysis:", err);
+      }
+    }
+  };
 
   useEffect(() => {
-    // Simulate real-time alerts coming in
-    const timeouts: NodeJS.Timeout[] = [];
+    fetchLatestNews();
 
-    mockAlerts.forEach((alert, index) => {
-      const timeout = setTimeout(() => {
-        setAlerts((prev) => [...prev, alert]);
-        setActiveAlert(alert);
+    // Set up real-time updates every 5 minutes
+    const interval = setInterval(fetchLatestNews, 5 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    // Enhance alerts with impact analysis
+    alerts.forEach((alert) => {
+      if (!alert.impact) {
+        enhanceAlertWithImpact(alert);
+      }
+    });
+  }, [alerts]);
+
+  useEffect(() => {
+    // Simulate real-time alert activation
+    if (alerts.length > 0) {
+      const interval = setInterval(() => {
+        const randomAlert = alerts[Math.floor(Math.random() * alerts.length)];
+        setActiveAlert(randomAlert);
 
         // Play alert sound (placeholder)
         // new Audio('/alert-sound.mp3').play().catch(() => {});
 
         // Clear active alert after 5 seconds
         setTimeout(() => setActiveAlert(null), 5000);
-      }, index * 3000);
+      }, 15000); // Show a random alert every 15 seconds
 
-      timeouts.push(timeout);
-    });
-
-    return () => timeouts.forEach(clearTimeout);
-  }, []);
+      return () => clearInterval(interval);
+    }
+  }, [alerts]);
 
   return (
     <div className="h-screen w-full bg-gradient-to-br from-black via-gray-900 to-black overflow-hidden">
@@ -130,6 +123,47 @@ export default function TechRadar() {
       <div className="absolute inset-0 bg-gradient-to-r from-purple-900/10 via-transparent to-blue-900/10 pointer-events-none" />
 
       <DashboardHeader />
+
+      {/* Loading state */}
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center z-50 bg-black/50 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="glass-panel p-8 rounded-xl text-center"
+          >
+            <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <h3 className="text-cyan-400 font-semibold text-lg mb-2">
+              Loading TechRadar
+            </h3>
+            <p className="text-gray-300 text-sm">
+              Fetching latest global tech intelligence...
+            </p>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Error state */}
+      {error && (
+        <div className="absolute top-20 right-4 z-40">
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="glass-panel-alert p-4 rounded-xl border border-red-500/50 max-w-sm"
+          >
+            <h4 className="text-red-400 font-semibold text-sm mb-2">
+              Connection Warning
+            </h4>
+            <p className="text-gray-300 text-xs">{error}</p>
+            <button
+              onClick={fetchLatestNews}
+              className="mt-2 text-cyan-400 hover:text-cyan-300 text-xs underline"
+            >
+              Retry Connection
+            </button>
+          </motion.div>
+        </div>
+      )}
 
       <div className="relative h-full pt-16 flex">
         {/* Main map area */}
@@ -145,20 +179,47 @@ export default function TechRadar() {
             animate={{ opacity: 1, x: 0 }}
             className="glass-panel p-4 rounded-xl"
           >
-            <h3 className="text-cyan-400 font-bold text-lg mb-4">
-              Live Alerts
-            </h3>
-            <div className="space-y-3">
-              {alerts.map((alert, index) => (
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-cyan-400 font-bold text-lg">Live Alerts</h3>
+              <button
+                onClick={fetchLatestNews}
+                className="text-gray-400 hover:text-cyan-400 transition-colors"
+                title="Refresh news"
+              >
                 <motion.div
-                  key={alert.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.2 }}
+                  animate={{ rotate: loading ? 360 : 0 }}
+                  transition={{ duration: 1, repeat: loading ? Infinity : 0 }}
                 >
-                  <NewsCard alert={alert} />
+                  ⟳
                 </motion.div>
-              ))}
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {alerts.length > 0
+                ? alerts.map((alert, index) => (
+                    <motion.div
+                      key={alert.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                    >
+                      <NewsCard alert={alert} />
+                    </motion.div>
+                  ))
+                : !loading && (
+                    <div className="text-center py-8">
+                      <p className="text-gray-400 text-sm">
+                        No alerts available
+                      </p>
+                      <button
+                        onClick={fetchLatestNews}
+                        className="mt-2 text-cyan-400 hover:text-cyan-300 text-sm underline"
+                      >
+                        Refresh
+                      </button>
+                    </div>
+                  )}
             </div>
           </motion.div>
         </div>

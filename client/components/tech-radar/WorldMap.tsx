@@ -145,7 +145,10 @@ export default function WorldMap({ alerts, activeAlert }: WorldMapProps) {
       connectionLine.addTo(map);
       connectionLinesRef.current.push(connectionLine);
 
-      // Create alert marker with radar pulse effect
+      // Create alert marker with radar pulse effect and relevance score
+      const relevanceSize = alert.relevance_score
+        ? Math.max(16, alert.relevance_score * 32)
+        : 24;
       const alertIcon = L.divIcon({
         className: "alert-marker",
         html: `
@@ -160,14 +163,29 @@ export default function WorldMap({ alerts, activeAlert }: WorldMapProps) {
             }
             <div class="relative w-4 h-4 bg-red-500 rounded-full border-2 border-red-300 shadow-lg ${
               isActive ? "animate-bounce" : ""
-            }"></div>
+            }" style="width: ${relevanceSize}px; height: ${relevanceSize}px"></div>
             <div class="absolute -top-6 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
               <span class="text-red-400 text-xs font-semibold bg-black/70 px-1.5 py-0.5 rounded backdrop-blur">${alert.city}</span>
             </div>
+            ${
+              alert.relevance_score
+                ? `
+              <div class="absolute -bottom-6 left-1/2 transform -translate-x-1/2">
+                <span class="text-yellow-400 text-xs font-bold bg-black/70 px-1 py-0.5 rounded">${Math.round(alert.relevance_score * 100)}%</span>
+              </div>
+            `
+                : ""
+            }
           </div>
         `,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16],
+        iconSize: [
+          Math.max(32, relevanceSize + 8),
+          Math.max(32, relevanceSize + 8),
+        ],
+        iconAnchor: [
+          Math.max(16, (relevanceSize + 8) / 2),
+          Math.max(16, (relevanceSize + 8) / 2),
+        ],
       });
 
       const marker = L.marker([alert.location.lat, alert.location.lng], {
@@ -177,22 +195,76 @@ export default function WorldMap({ alerts, activeAlert }: WorldMapProps) {
       marker.on("mouseover", () => setHoveredAlert(alert.id));
       marker.on("mouseout", () => setHoveredAlert(null));
 
-      // Add popup with alert details
-      marker.bindPopup(
-        `
-        <div class="bg-black/90 text-white p-3 rounded-lg border border-cyan-500/30 backdrop-blur">
-          <h4 class="font-bold text-cyan-400 mb-2">${alert.headline}</h4>
-          <p class="text-xs text-gray-300 mb-2">${alert.summary}</p>
-          <div class="flex justify-between text-xs">
-            <span class="text-cyan-400">${alert.category}</span>
-            <span class="text-gray-400">${alert.source}</span>
+      // Add popup with enhanced alert details
+      const popupContent = `
+        <div class="bg-black/90 text-white p-4 rounded-lg border border-cyan-500/30 backdrop-blur max-w-sm">
+          <h4 class="font-bold text-cyan-400 mb-2 text-sm">${alert.headline}</h4>
+          <p class="text-xs text-gray-300 mb-3 leading-relaxed">${alert.summary}</p>
+
+          <div class="grid grid-cols-2 gap-2 mb-3 text-xs">
+            <div>
+              <span class="text-gray-400">Category:</span>
+              <span class="text-cyan-400 ml-1">${alert.category}</span>
+            </div>
+            <div>
+              <span class="text-gray-400">Source:</span>
+              <span class="text-white ml-1">${alert.source}</span>
+            </div>
           </div>
+
+          ${
+            alert.relevance_score
+              ? `
+            <div class="mb-2">
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-gray-400">Relevance to ADNOC</span>
+                <span class="text-yellow-400 font-bold">${Math.round(alert.relevance_score * 100)}%</span>
+              </div>
+              <div class="w-full bg-gray-700 rounded-full h-1.5">
+                <div class="bg-gradient-to-r from-yellow-600 to-yellow-400 h-1.5 rounded-full" style="width: ${alert.relevance_score * 100}%"></div>
+              </div>
+            </div>
+          `
+              : ""
+          }
+
+          ${
+            alert.keywords && alert.keywords.length > 0
+              ? `
+            <div class="mb-2">
+              <span class="text-gray-400 text-xs">Keywords:</span>
+              <div class="flex flex-wrap gap-1 mt-1">
+                ${alert.keywords
+                  .slice(0, 4)
+                  .map(
+                    (keyword) => `
+                  <span class="bg-gray-800 text-cyan-400 text-xs px-2 py-0.5 rounded">${keyword}</span>
+                `,
+                  )
+                  .join("")}
+              </div>
+            </div>
+          `
+              : ""
+          }
+
+          ${
+            alert.url
+              ? `
+            <a href="${alert.url}" target="_blank" rel="noopener noreferrer"
+               class="inline-flex items-center text-cyan-400 hover:text-cyan-300 text-xs mt-2">
+              Read Full Article →
+            </a>
+          `
+              : ""
+          }
         </div>
-      `,
-        {
-          className: "custom-popup",
-        },
-      );
+      `;
+
+      marker.bindPopup(popupContent, {
+        className: "custom-popup",
+        maxWidth: 300,
+      });
 
       marker.addTo(map);
       markersRef.current.push(marker);
