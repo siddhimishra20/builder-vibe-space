@@ -408,30 +408,37 @@ export class NewsService {
   }
 
   private getFallbackData(): NewsItem[] {
-    // Fallback data in case the n8n workflow is unavailable
+    // Fallback data in case Pinecone is unavailable
     return [
       {
         id: "fallback_1",
-        headline: "Microsoft Announces Major AI Infrastructure Investment",
+        headline:
+          "Microsoft Announces $10B AI Infrastructure Expansion in Middle East",
         source: "Reuters",
         category: "AI",
-        summary: "Microsoft commits $20B to new AI data centers across Europe",
+        summary:
+          "Microsoft plans major AI data centers across Gulf region, targeting energy sector applications",
         location: {
-          lat: 52.52,
-          lng: 13.405,
-          city: "Berlin",
-          country: "Germany",
+          lat: 24.4539,
+          lng: 54.3773,
+          city: "Abu Dhabi",
+          country: "UAE",
         },
         timestamp: new Date().toISOString(),
         impact:
-          "Potential partnership opportunities for ADNOC's digital transformation initiatives",
+          "Direct opportunity for ADNOC to partner on AI-powered oil & gas operations optimization",
+        relevance_score: 0.95,
+        keywords: ["AI", "Microsoft", "Middle East", "Energy"],
+        url: "https://reuters.com/tech/microsoft-ai-expansion",
       },
       {
         id: "fallback_2",
-        headline: "Saudi Arabia Launches New Green Hydrogen Initiative",
-        source: "Bloomberg",
+        headline:
+          "Saudi Arabia's NEOM Unveils World's Largest Green Hydrogen Plant",
+        source: "Bloomberg Energy",
         category: "Energy Tech",
-        summary: "NEOM announces $8.5B green hydrogen facility",
+        summary:
+          "Revolutionary $8.5B facility to produce 650 tons of green hydrogen daily using renewable energy",
         location: {
           lat: 24.7136,
           lng: 46.6753,
@@ -440,7 +447,85 @@ export class NewsService {
         },
         timestamp: new Date(Date.now() - 300000).toISOString(),
         impact:
-          "Direct competition in renewable energy sector - strategic response needed",
+          "Competitive pressure on ADNOC's hydrogen strategy - immediate strategic response required",
+        relevance_score: 0.88,
+        keywords: [
+          "Green Hydrogen",
+          "NEOM",
+          "Renewable Energy",
+          "Saudi Arabia",
+        ],
+        url: "https://bloomberg.com/energy/hydrogen-facility",
+      },
+      {
+        id: "fallback_3",
+        headline: "China's AI Breakthrough: Quantum-Enhanced Energy Modeling",
+        source: "Nature Energy",
+        category: "Quantum Computing",
+        summary:
+          "Chinese researchers achieve 1000x faster energy reservoir simulations using quantum AI",
+        location: {
+          lat: 39.9042,
+          lng: 116.4074,
+          city: "Beijing",
+          country: "China",
+        },
+        timestamp: new Date(Date.now() - 600000).toISOString(),
+        impact:
+          "Revolutionary modeling capabilities could transform ADNOC's exploration and production efficiency",
+        relevance_score: 0.82,
+        keywords: ["Quantum Computing", "AI", "Energy Modeling", "China"],
+        url: "https://nature.com/energy/quantum-ai",
+      },
+      {
+        id: "fallback_4",
+        headline: "Tesla Energy Storage Breakthrough: 10x Battery Density",
+        source: "TechCrunch",
+        category: "Energy Storage",
+        summary:
+          "New silicon-nanowire technology promises game-changing energy storage for renewable grids",
+        location: {
+          lat: 37.7749,
+          lng: -122.4194,
+          city: "San Francisco",
+          country: "USA",
+        },
+        timestamp: new Date(Date.now() - 900000).toISOString(),
+        impact:
+          "Critical technology for ADNOC's renewable energy projects and grid-scale storage solutions",
+        relevance_score: 0.75,
+        keywords: [
+          "Battery Technology",
+          "Tesla",
+          "Energy Storage",
+          "Renewable",
+        ],
+        url: "https://techcrunch.com/tesla-battery-breakthrough",
+      },
+      {
+        id: "fallback_5",
+        headline: "Norway's Floating Wind Farm Sets New Efficiency Record",
+        source: "Energy Voice",
+        category: "Energy Tech",
+        summary:
+          "Hywind Tampen achieves 60% capacity factor, demonstrating viability of offshore wind",
+        location: {
+          lat: 59.9139,
+          lng: 10.7522,
+          city: "Oslo",
+          country: "Norway",
+        },
+        timestamp: new Date(Date.now() - 1200000).toISOString(),
+        impact:
+          "Proven technology for ADNOC's offshore renewable energy strategy in UAE waters",
+        relevance_score: 0.78,
+        keywords: [
+          "Offshore Wind",
+          "Floating Technology",
+          "Norway",
+          "Renewable",
+        ],
+        url: "https://energyvoice.com/floating-wind-record",
       },
     ];
   }
