@@ -24,10 +24,17 @@ export const handleNewsProxy: RequestHandler = async (req, res) => {
 
     if (!response.ok) {
       console.error("Webhook error:", response.status, response.statusText);
+
+      // Get the error response body for debugging
+      const errorText = await response.text();
+      console.error("Webhook error response:", errorText);
+
       return res.status(response.status).json({
         error: "Webhook request failed",
         status: response.status,
         statusText: response.statusText,
+        webhookResponse: errorText,
+        webhookUrl: NEWS_WEBHOOK_URL,
       });
     }
 
