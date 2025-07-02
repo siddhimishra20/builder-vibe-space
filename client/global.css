@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Leaflet CSS for realistic maps */
+@import "leaflet/dist/leaflet.css";
+
 @layer base {
   /**
    * Tailwind CSS theme
