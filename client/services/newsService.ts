@@ -72,13 +72,54 @@ export class NewsService {
       clearTimeout(timeoutId);
 
       if (response.ok) {
-        const rawData = await response.json();
-        console.log("Successfully received database data:", rawData);
+        // Check content type first
+        const contentType = response.headers.get("content-type");
+        console.log("Response content type:", contentType);
+        console.log("Response status:", response.status);
+
+        // Get response as text first to debug
+        const responseText = await response.text();
+        console.log("Raw response text:", responseText);
+        console.log("Response text length:", responseText.length);
+
+        if (!responseText || responseText.trim().length === 0) {
+          console.warn("Empty response from database");
+          throw new Error("Empty response from database");
+        }
+
+        let rawData;
+        try {
+          rawData = JSON.parse(responseText);
+          console.log("Successfully parsed JSON data:", rawData);
+        } catch (parseError) {
+          console.error("JSON parse error:", parseError);
+          console.error(
+            "Failed to parse response:",
+            responseText.substring(0, 500),
+          );
+
+          // Check if it's HTML (error page)
+          if (
+            responseText.includes("<html>") ||
+            responseText.includes("<!DOCTYPE")
+          ) {
+            throw new Error(
+              "Received HTML instead of JSON - webhook may be returning error page",
+            );
+          }
+
+          throw new Error(`Invalid JSON response: ${parseError.message}`);
+        }
 
         // Transform the webhook data to our format
         const transformedData = this.transformWebhookData(rawData);
 
         if (transformedData.length > 0) {
+          console.log(
+            "Successfully transformed",
+            transformedData.length,
+            "news items",
+          );
           // Cache the real data
           this.cache.set(cacheKey, {
             data: transformedData,
@@ -86,6 +127,8 @@ export class NewsService {
           });
 
           return transformedData;
+        } else {
+          console.warn("No valid news items after transformation");
         }
       } else {
         console.warn(
@@ -93,6 +136,14 @@ export class NewsService {
           response.status,
           response.statusText,
         );
+
+        // Try to get error details
+        try {
+          const errorText = await response.text();
+          console.warn("Error response body:", errorText);
+        } catch (e) {
+          console.warn("Could not read error response");
+        }
       }
     } catch (error) {
       console.error("Error fetching real data from database:", error);
@@ -176,60 +227,118 @@ export class NewsService {
 
   private transformWebhookData(webhookData: any): NewsItem[] {
     console.log("Transforming webhook data:", webhookData);
+    console.log("Webhook data type:", typeof webhookData);
+
+    if (!webhookData) {
+      console.warn("Webhook data is null or undefined");
+      return [];
+    }
 
     // Handle different possible data structures
     let newsArray: any[] = [];
 
     if (Array.isArray(webhookData)) {
+      console.log("Data is array with", webhookData.length, "items");
       newsArray = webhookData;
     } else if (webhookData.data && Array.isArray(webhookData.data)) {
+      console.log("Data.data is array with", webhookData.data.length, "items");
       newsArray = webhookData.data;
     } else if (webhookData.news && Array.isArray(webhookData.news)) {
+      console.log("Data.news is array with", webhookData.news.length, "items");
       newsArray = webhookData.news;
     } else if (webhookData.articles && Array.isArray(webhookData.articles)) {
+      console.log(
+        "Data.articles is array with",
+        webhookData.articles.length,
+        "items",
+      );
       newsArray = webhookData.articles;
-    } else if (typeof webhookData === "object") {
+    } else if (webhookData.items && Array.isArray(webhookData.items)) {
+      console.log(
+        "Data.items is array with",
+        webhookData.items.length,
+        "items",
+      );
+      newsArray = webhookData.items;
+    } else if (typeof webhookData === "object" && webhookData !== null) {
       // If it's a single object, wrap it in an array
+      console.log("Single object, wrapping in array");
       newsArray = [webhookData];
+    } else {
+      console.warn(
+        "Unrecognized data structure:",
+        Object.keys(webhookData || {}),
+      );
+      return [];
     }
 
-    return newsArray.map((item: any, index: number) => {
-      const transformedItem: NewsItem = {
-        id: item.id || item._id || `webhook_${Date.now()}_${index}`,
-        headline: item.headline || item.title || item.name || "Tech News Alert",
-        source:
-          item.source || item.publisher || item.author || "Tech Intelligence",
-        category: this.categorizeNews(
-          item.category || item.type || item.tag || item.headline || "",
-        ),
-        summary:
-          item.summary ||
-          item.description ||
-          item.content ||
-          item.excerpt ||
-          "Latest technology development detected",
-        location: this.extractLocation(
-          item.location || item.country || item.city || item.region,
-        ),
-        timestamp:
-          item.timestamp ||
-          item.published_at ||
-          item.date ||
-          item.created_at ||
-          new Date().toISOString(),
-        impact: item.impact || "",
-        relevance_score: this.calculateRelevanceScore(item),
-        keywords: this.extractKeywords(item),
-        url: item.url || item.link || item.source_url || "",
-      };
+    if (newsArray.length === 0) {
+      console.warn("News array is empty");
+      return [];
+    }
 
-      // Generate impact analysis for items without it
-      if (!transformedItem.impact) {
-        transformedItem.impact = this.generateEnhancedImpact(transformedItem);
-      }
+    console.log("Processing", newsArray.length, "items");
 
-      return transformedItem;
-    });
+    const transformedItems = newsArray
+      .map((item: any, index: number) => {
+        try {
+          console.log(`Processing item ${index + 1}:`, item);
+
+          const transformedItem: NewsItem = {
+            id: item.id || item._id || `webhook_${Date.now()}_${index}`,
+            headline:
+              item.headline || item.title || item.name || "Tech News Alert",
+            source:
+              item.source ||
+              item.publisher ||
+              item.author ||
+              "Tech Intelligence",
+            category: this.categorizeNews(
+              item.category || item.type || item.tag || item.headline || "",
+            ),
+            summary:
+              item.summary ||
+              item.description ||
+              item.content ||
+              item.excerpt ||
+              "Latest technology development detected",
+            location: this.extractLocation(
+              item.location || item.country || item.city || item.region,
+            ),
+            timestamp:
+              item.timestamp ||
+              item.published_at ||
+              item.date ||
+              item.created_at ||
+              new Date().toISOString(),
+            impact: item.impact || "",
+            relevance_score: this.calculateRelevanceScore(item),
+            keywords: this.extractKeywords(item),
+            url: item.url || item.link || item.source_url || "",
+          };
+
+          // Generate impact analysis for items without it
+          if (!transformedItem.impact) {
+            transformedItem.impact =
+              this.generateEnhancedImpact(transformedItem);
+          }
+
+          console.log(
+            `Successfully transformed item ${index + 1}:`,
+            transformedItem.headline,
+          );
+          return transformedItem;
+        } catch (error) {
+          console.error(`Error transforming item ${index + 1}:`, error, item);
+          return null;
+        }
+      })
+      .filter((item): item is NewsItem => item !== null);
+
+    console.log(
+      `Successfully transformed ${transformedItems.length} out of ${newsArray.length} items`,
+    );
+    return transformedItems;
   }
 
   private calculateRelevanceScore(item: any): number {
