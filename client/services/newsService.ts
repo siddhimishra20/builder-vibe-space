@@ -23,8 +23,7 @@ interface N8nResponse {
   total: number;
 }
 
-const NEWS_WEBHOOK_URL =
-  "https://e0ca-5-195-220-7.ngrok-free.app/webhook-test/50e6515b-a272-40d5-9c9f-4b70c9697362";
+const NEWS_API_URL = "/api/news"; // Use Express proxy instead of direct webhook
 
 export class NewsService {
   private static instance: NewsService;
@@ -138,30 +137,34 @@ export class NewsService {
           response.statusText,
         );
 
-        // Try to get error details
+        // Try to get error details from proxy
         try {
-          const errorText = await response.text();
-          console.warn("Error response body:", errorText);
+          const errorData = await response.json();
+          console.warn("Proxy error details:", errorData);
+
+          if (errorData.error) {
+            throw new Error(`Proxy error: ${errorData.error}`);
+          }
         } catch (e) {
-          console.warn("Could not read error response");
+          console.warn("Could not read proxy error response");
         }
       }
     } catch (error) {
-      console.error("Error fetching real data from database:", error);
+      console.error("Error fetching real data via proxy:", error);
 
       if (error instanceof Error) {
         if (error.name === "AbortError") {
           console.log(
-            "Database connection timeout - this may indicate network issues",
+            "Proxy request timeout - database may be slow to respond",
           );
         } else {
-          console.log("Database connection error:", error.message);
+          console.log("Proxy connection error:", error.message);
         }
       }
     }
 
     // Only use fallback data as last resort
-    console.warn("Using fallback data - database connection failed");
+    console.warn("Using fallback data - database proxy connection failed");
     const fallbackData = this.getFallbackData();
 
     // Cache fallback data with shorter duration to retry sooner
