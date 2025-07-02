@@ -20,6 +20,7 @@ export const handleWebhookTest: RequestHandler = async (req, res) => {
       method: "GET",
       headers: testHeaders,
     });
+  
 
     console.log("Test response status:", response.status);
     console.log(
