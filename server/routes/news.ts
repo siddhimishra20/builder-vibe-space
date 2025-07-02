@@ -1,7 +1,7 @@
 import { RequestHandler } from "express";
 
 const NEWS_WEBHOOK_URL =
-  "https://e0ca-5-195-220-7.ngrok-free.app/webhook-test/0634cba5-334d-434c-aa51-607949086c77";
+  "https://e0ca-5-195-220-7.ngrok-free.app/webhook/0634cba5-334d-434c-aa51-607949086c77";
 
 export const handleNewsProxy: RequestHandler = async (req, res) => {
   try {
