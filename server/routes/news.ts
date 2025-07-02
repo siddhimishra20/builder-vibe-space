@@ -7,7 +7,7 @@ export const handleNewsProxy: RequestHandler = async (req, res) => {
   try {
     console.log("Proxying news request to:", NEWS_WEBHOOK_URL);
 
-    const response = await fetch(NEWS_WEBHOOK_URL, {
+    const response = await fetch(NEWS_WEBHOOK_URL, {x
       method: "GET",
       headers: {
         Accept: "application/json",
