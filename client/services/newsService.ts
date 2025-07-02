@@ -54,22 +54,28 @@ export class NewsService {
         "Fetching real data from database webhook:",
         NEWS_WEBHOOK_URL,
       );
+      console.log("Request timestamp:", new Date().toISOString());
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout for real data
 
+      const requestHeaders = {
+        Accept: "application/json",
+        "ngrok-skip-browser-warning": "true",
+        "User-Agent": "TechRadar-Dashboard/1.0",
+        "Cache-Control": "no-cache",
+      };
+
+      console.log("Request headers:", requestHeaders);
+
       const response = await fetch(NEWS_WEBHOOK_URL, {
         method: "GET",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true",
-          "User-Agent": "TechRadar-Dashboard/1.0",
-        },
+        headers: requestHeaders,
         signal: controller.signal,
       });
 
       clearTimeout(timeoutId);
+      console.log("Response received, status:", response.status);
 
       if (response.ok) {
         // Check content type first
