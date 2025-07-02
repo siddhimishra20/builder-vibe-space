@@ -62,25 +62,27 @@ export default function TechRadar() {
         setTimeout(() => setActiveAlert(null), 5000);
       }
     } catch (err) {
-      console.error("Error fetching news:", err);
-      setError("Connection issue - using cached data");
+      console.error("Error fetching news from database:", err);
+      setError("Database connection failed");
 
-      // Even if there's an error, provide fallback data
-      const fallbackData = [
-        {
-          id: "emergency_1",
-          headline: "TechRadar Operating in Demo Mode",
-          source: "System",
-          category: "System",
-          summary: "Dashboard is operational with simulated intelligence data",
-          location: { lat: 24.4539, lng: 54.3773 },
-          city: "Abu Dhabi",
-          country: "UAE",
-          timestamp: new Date(),
-          impact: "System operational - displaying demo intelligence data",
-        },
-      ];
-      setAlerts(fallbackData);
+      // Still set alerts if we get fallback data, but mark as error
+      if (alerts.length === 0) {
+        const emergencyData = [
+          {
+            id: "error_1",
+            headline: "Database Connection Error",
+            source: "System",
+            category: "System",
+            summary: "Unable to connect to news database - check connection",
+            location: { lat: 24.4539, lng: 54.3773 },
+            city: "Abu Dhabi",
+            country: "UAE",
+            timestamp: new Date(),
+            impact: "Database connectivity issue detected",
+          },
+        ];
+        setAlerts(emergencyData);
+      }
     } finally {
       setLoading(false);
     }
@@ -102,8 +104,8 @@ export default function TechRadar() {
   useEffect(() => {
     fetchLatestNews();
 
-    // Set up real-time updates every 5 minutes
-    const interval = setInterval(fetchLatestNews, 5 * 60 * 1000);
+    // Set up more frequent updates to get real data (every 2 minutes)
+    const interval = setInterval(fetchLatestNews, 2 * 60 * 1000);
 
     return () => clearInterval(interval);
   }, []);
@@ -174,7 +176,7 @@ export default function TechRadar() {
                 loading
                   ? "bg-yellow-500 animate-pulse"
                   : error
-                    ? "bg-orange-500 animate-pulse"
+                    ? "bg-red-500 animate-pulse"
                     : "bg-green-500 animate-pulse"
               }`}
             />
@@ -183,23 +185,27 @@ export default function TechRadar() {
                 loading
                   ? "text-yellow-400"
                   : error
-                    ? "text-orange-400"
+                    ? "text-red-400"
                     : "text-green-400"
               }`}
             >
-              {loading ? "LOADING..." : error ? "DEMO MODE" : "SYSTEM READY"}
+              {loading
+                ? "CONNECTING..."
+                : error
+                  ? "DATABASE ERROR"
+                  : "LIVE DATABASE"}
             </span>
           </div>
           <p className="text-gray-300 text-xs mt-1">
             {loading
-              ? "Initializing TechRadar..."
+              ? "Connecting to database..."
               : error
-                ? "Using simulated intelligence data"
-                : `${alerts.length} alerts monitoring global tech`}
+                ? "Failed to connect to database"
+                : `${alerts.length} live alerts from database`}
           </p>
           {error && (
-            <p className="text-orange-400 text-xs mt-1">
-              Webhook connection pending
+            <p className="text-red-400 text-xs mt-1">
+              Check database connection
             </p>
           )}
         </motion.div>

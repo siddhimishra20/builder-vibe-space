@@ -48,34 +48,18 @@ export class NewsService {
       return cached.data;
     }
 
-    // Always start with fallback data to ensure the app works
-    const fallbackData = this.getFallbackData();
-
-    // Cache fallback data immediately
-    this.cache.set(cacheKey, {
-      data: fallbackData,
-      timestamp: Date.now(),
-    });
-
-    // Try to fetch from webhook in background (non-blocking)
-    this.tryWebhookFetch(cacheKey).catch(() => {
-      // Silently fail - we already have fallback data
-    });
-
-    return fallbackData;
-  }
-
-  private async tryWebhookFetch(cacheKey: string): Promise<void> {
+    // First, try to get real data from the database
     try {
-      console.log("Attempting webhook connection to:", NEWS_WEBHOOK_URL);
+      console.log(
+        "Fetching real data from database webhook:",
+        NEWS_WEBHOOK_URL,
+      );
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout for real data
 
-      // Try different approaches for CORS
       const response = await fetch(NEWS_WEBHOOK_URL, {
         method: "GET",
-        mode: "cors", // Explicit CORS mode
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
@@ -86,44 +70,55 @@ export class NewsService {
       });
 
       clearTimeout(timeoutId);
-      console.log("Webhook response status:", response.status);
 
       if (response.ok) {
         const rawData = await response.json();
-        console.log("Successfully received webhook data:", rawData);
+        console.log("Successfully received database data:", rawData);
 
-        // Transform and update cache with real data
+        // Transform the webhook data to our format
         const transformedData = this.transformWebhookData(rawData);
 
-        this.cache.set(cacheKey, {
-          data: transformedData,
-          timestamp: Date.now(),
-        });
+        if (transformedData.length > 0) {
+          // Cache the real data
+          this.cache.set(cacheKey, {
+            data: transformedData,
+            timestamp: Date.now(),
+          });
 
-        // Optionally trigger a refresh of the UI here
-        console.log("Live data cached successfully");
+          return transformedData;
+        }
       } else {
-        console.log(
-          "Webhook responded with error:",
+        console.warn(
+          "Database responded with error:",
           response.status,
           response.statusText,
         );
       }
     } catch (error) {
+      console.error("Error fetching real data from database:", error);
+
       if (error instanceof Error) {
         if (error.name === "AbortError") {
-          console.log("Webhook connection timeout - using fallback data");
-        } else if (error.message.includes("CORS")) {
-          console.log("CORS error with webhook - using fallback data");
-        } else if (error.message.includes("Failed to fetch")) {
           console.log(
-            "Network error connecting to webhook - using fallback data",
+            "Database connection timeout - this may indicate network issues",
           );
         } else {
-          console.log("Webhook connection error:", error.message);
+          console.log("Database connection error:", error.message);
         }
       }
     }
+
+    // Only use fallback data as last resort
+    console.warn("Using fallback data - database connection failed");
+    const fallbackData = this.getFallbackData();
+
+    // Cache fallback data with shorter duration to retry sooner
+    this.cache.set(cacheKey, {
+      data: fallbackData,
+      timestamp: Date.now() - this.CACHE_DURATION * 0.5, // Half cache duration
+    });
+
+    return fallbackData;
   }
 
   async searchNews(query: string): Promise<NewsItem[]> {
