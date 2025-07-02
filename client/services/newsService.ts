@@ -48,34 +48,29 @@ export class NewsService {
       return cached.data;
     }
 
-    // First, try to get real data from the database
+    // First, try to get real data from the database via Express proxy
     try {
-      console.log(
-        "Fetching real data from database webhook:",
-        NEWS_WEBHOOK_URL,
-      );
+      console.log("Fetching real data from database via proxy:", NEWS_API_URL);
       console.log("Request timestamp:", new Date().toISOString());
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout for real data
+      const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout for real data
 
       const requestHeaders = {
         Accept: "application/json",
-        "ngrok-skip-browser-warning": "true",
-        "User-Agent": "TechRadar-Dashboard/1.0",
         "Cache-Control": "no-cache",
       };
 
       console.log("Request headers:", requestHeaders);
 
-      const response = await fetch(NEWS_WEBHOOK_URL, {
+      const response = await fetch(NEWS_API_URL, {
         method: "GET",
         headers: requestHeaders,
         signal: controller.signal,
       });
 
       clearTimeout(timeoutId);
-      console.log("Response received, status:", response.status);
+      console.log("Proxy response received, status:", response.status);
 
       if (response.ok) {
         // Check content type first
