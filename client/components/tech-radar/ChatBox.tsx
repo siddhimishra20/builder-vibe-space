@@ -7,9 +7,11 @@ import {
   User,
   Minimize2,
   Maximize2,
+  Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import newsService from "../services/newsService";
 
 interface Message {
   id: string;
@@ -23,14 +25,14 @@ export default function ChatBox() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      text: "Hello! I'm TechRadar AI. Ask me about any of the alerts or global tech trends.",
+      text: "🛰️ TechRadar AI online! I'm connected to global tech intelligence networks. Ask me about:\n\n• Current alerts and trends\n• AI & Energy Tech developments\n• ADNOC impact analysis\n• Specific companies or regions\n\nType your query to search real-time tech news!",
       sender: "ai",
       timestamp: new Date(),
     },
   ]);
   const [inputText, setInputText] = useState("");
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!inputText.trim()) return;
 
     const userMessage: Message = {
@@ -41,18 +43,61 @@ export default function ChatBox() {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    const query = inputText;
     setInputText("");
 
-    // Simulate AI response
-    setTimeout(() => {
+    // Add typing indicator
+    const typingMessage: Message = {
+      id: "typing",
+      text: "🔍 Searching global tech intelligence...",
+      sender: "ai",
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, typingMessage]);
+
+    try {
+      // Search for relevant news
+      const searchResults = await newsService.searchNews(query);
+
+      // Remove typing indicator
+      setMessages((prev) => prev.filter((msg) => msg.id !== "typing"));
+
+      let response = "";
+      if (searchResults.length > 0) {
+        response = `Found ${searchResults.length} relevant articles:\n\n`;
+        searchResults.slice(0, 3).forEach((news, index) => {
+          response += `${index + 1}. **${news.headline}**\n`;
+          response += `   📍 ${news.location.city}, ${news.location.country}\n`;
+          response += `   📊 ${news.category} | ${news.source}\n`;
+          response += `   💡 ${news.summary.substring(0, 100)}...\n\n`;
+        });
+
+        if (searchResults.length > 3) {
+          response += `...and ${searchResults.length - 3} more results`;
+        }
+      } else {
+        response = `No specific results found for "${query}". However, I'm monitoring global tech trends in AI, Energy Tech, Robotics, and Quantum Computing. Ask me about:\n\n• Latest AI developments\n• Energy technology innovations\n• ADNOC-relevant tech trends\n• Specific companies or regions`;
+      }
+
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
-        text: "I'm analyzing the latest tech trends. This feature will be fully integrated with AI soon!",
+        text: response,
         sender: "ai",
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, aiResponse]);
-    }, 1000);
+    } catch (error) {
+      // Remove typing indicator
+      setMessages((prev) => prev.filter((msg) => msg.id !== "typing"));
+
+      const errorResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        text: "I'm experiencing connectivity issues with the intelligence network. Please try again or ask me about the current alerts on the dashboard.",
+        sender: "ai",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorResponse]);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -113,7 +158,7 @@ export default function ChatBox() {
                     </div>
                   )}
                   <div
-                    className={`max-w-[70%] p-3 rounded-lg text-sm ${
+                    className={`max-w-[70%] p-3 rounded-lg text-sm whitespace-pre-wrap ${
                       message.sender === "user"
                         ? "bg-cyan-600 text-white"
                         : "bg-gray-800 text-gray-200 border border-gray-700"
@@ -133,17 +178,21 @@ export default function ChatBox() {
             {/* Input */}
             <div className="p-4 border-t border-gray-700/50">
               <div className="flex gap-2">
-                <Input
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Ask about tech trends..."
-                  className="bg-gray-800/50 border-gray-600 text-white placeholder-gray-400 focus:border-cyan-500"
-                />
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    value={inputText}
+                    onChange={(e) => setInputText(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Search global tech intelligence..."
+                    className="bg-gray-800/50 border-gray-600 text-white placeholder-gray-400 focus:border-cyan-500 pl-10"
+                  />
+                </div>
                 <Button
                   onClick={handleSendMessage}
                   size="icon"
                   className="bg-cyan-600 hover:bg-cyan-700 text-white"
+                  disabled={!inputText.trim()}
                 >
                   <Send className="w-4 h-4" />
                 </Button>
