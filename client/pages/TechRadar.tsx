@@ -151,13 +151,19 @@ export default function TechRadar() {
           className="glass-panel p-3 rounded-xl border border-cyan-500/30 max-w-sm"
         >
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
-            <span className="text-yellow-400 text-xs font-semibold">
-              DEMO MODE
+            <div
+              className={`w-2 h-2 rounded-full ${loading ? "bg-yellow-500 animate-pulse" : "bg-green-500 animate-pulse"}`}
+            />
+            <span
+              className={`text-xs font-semibold ${loading ? "text-yellow-400" : "text-green-400"}`}
+            >
+              {loading ? "CONNECTING..." : "LIVE DATA"}
             </span>
           </div>
           <p className="text-gray-300 text-xs mt-1">
-            Using simulated tech intelligence data
+            {loading
+              ? "Fetching latest intelligence..."
+              : "Real-time global tech news"}
           </p>
           {error && <p className="text-red-400 text-xs mt-1">{error}</p>}
         </motion.div>

@@ -23,7 +23,8 @@ interface N8nResponse {
   total: number;
 }
 
-const PINECONE_HOST = "https://n8n-3-138rhrh.svc.aped-4627-b74a.pinecone.io";
+const NEWS_WEBHOOK_URL =
+  "https://e0ca-5-195-220-7.ngrok-free.app/webhook-test/50e6515b-a272-40d5-9c9f-4b70c9697362";
 
 export class NewsService {
   private static instance: NewsService;
@@ -47,94 +48,85 @@ export class NewsService {
       return cached.data;
     }
 
-    // For now, use fallback data while we debug Pinecone connection
-    console.log("Pinecone connection debugging - using fallback data");
-    const fallbackData = this.getFallbackData();
-
-    // Cache the fallback data
-    this.cache.set(cacheKey, {
-      data: fallbackData,
-      timestamp: Date.now(),
-    });
-
-    // Try to connect to Pinecone in the background (non-blocking)
-    this.tryPineconeConnection().catch((error) => {
-      console.log("Background Pinecone connection failed:", error.message);
-    });
-
-    return fallbackData;
-  }
-
-  private async tryPineconeConnection(): Promise<void> {
     try {
-      console.log("Attempting Pinecone connection to:", PINECONE_HOST);
+      console.log("Fetching latest news from webhook:", NEWS_WEBHOOK_URL);
 
-      // Test with a simple fetch with timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-      const response = await fetch(`${PINECONE_HOST}/query`, {
-        method: "POST",
+      const response = await fetch(NEWS_WEBHOOK_URL, {
+        method: "GET",
         headers: {
-          "Content-Type": "application/json",
           Accept: "application/json",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type",
+          "ngrok-skip-browser-warning": "true", // Skip ngrok warning
         },
         signal: controller.signal,
-        body: JSON.stringify({
-          vector: this.getEmbeddingForQuery("test"),
-          topK: 1,
-          includeMetadata: true,
-          includeValues: false,
-        }),
       });
 
       clearTimeout(timeoutId);
-      console.log("Pinecone response status:", response.status);
 
-      if (response.ok) {
-        const result = await response.json();
-        console.log("Pinecone connection successful:", result);
-      } else {
-        console.log("Pinecone response error:", response.statusText);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+
+      const rawData = await response.json();
+      console.log("Received news data:", rawData);
+
+      // Transform the webhook data to our format
+      const transformedData = this.transformWebhookData(rawData);
+
+      // Cache the result
+      this.cache.set(cacheKey, {
+        data: transformedData,
+        timestamp: Date.now(),
+      });
+
+      return transformedData;
     } catch (error) {
-      if (error instanceof Error) {
-        if (error.name === "AbortError") {
-          console.log("Pinecone connection timeout");
-        } else {
-          console.log("Pinecone connection error:", error.message);
-        }
-      }
+      console.error("Error fetching news from webhook:", error);
+
+      // Return fallback data if webhook is unavailable
+      const fallbackData = this.getFallbackData();
+
+      // Cache fallback data for a shorter time
+      this.cache.set(cacheKey, {
+        data: fallbackData,
+        timestamp: Date.now(),
+      });
+
+      return fallbackData;
     }
   }
 
   async searchNews(query: string): Promise<NewsItem[]> {
     console.log("Searching for:", query);
 
-    // For now, return filtered fallback data based on query
-    const fallbackData = this.getFallbackData();
-    const queryLower = query.toLowerCase();
+    try {
+      // First get the latest news data
+      const allNews = await this.fetchLatestNews();
+      const queryLower = query.toLowerCase();
 
-    // Filter fallback data based on query
-    const filtered = fallbackData.filter(
-      (item) =>
-        item.headline.toLowerCase().includes(queryLower) ||
-        item.summary.toLowerCase().includes(queryLower) ||
-        item.category.toLowerCase().includes(queryLower) ||
-        item.keywords?.some((keyword) =>
-          keyword.toLowerCase().includes(queryLower),
-        ),
-    );
+      // Filter news based on query
+      const filtered = allNews.filter(
+        (item) =>
+          item.headline.toLowerCase().includes(queryLower) ||
+          item.summary.toLowerCase().includes(queryLower) ||
+          item.category.toLowerCase().includes(queryLower) ||
+          item.keywords?.some((keyword) =>
+            keyword.toLowerCase().includes(queryLower),
+          ),
+      );
 
-    // If no matches, return some relevant items
-    if (filtered.length === 0) {
-      return fallbackData.slice(0, 3);
+      // If no matches, return most relevant items
+      if (filtered.length === 0) {
+        return allNews.slice(0, 3);
+      }
+
+      return filtered.slice(0, 5);
+    } catch (error) {
+      console.error("Error searching news:", error);
+      return [];
     }
-
-    return filtered.slice(0, 5);
   }
 
   async getImpactAnalysis(newsItem: NewsItem): Promise<string> {
@@ -161,41 +153,142 @@ export class NewsService {
     }));
   }
 
-  private transformPineconeData(pineconeResult: any): NewsItem[] {
-    if (!pineconeResult || !pineconeResult.matches) {
-      return [];
+  private transformWebhookData(webhookData: any): NewsItem[] {
+    console.log("Transforming webhook data:", webhookData);
+
+    // Handle different possible data structures
+    let newsArray: any[] = [];
+
+    if (Array.isArray(webhookData)) {
+      newsArray = webhookData;
+    } else if (webhookData.data && Array.isArray(webhookData.data)) {
+      newsArray = webhookData.data;
+    } else if (webhookData.news && Array.isArray(webhookData.news)) {
+      newsArray = webhookData.news;
+    } else if (webhookData.articles && Array.isArray(webhookData.articles)) {
+      newsArray = webhookData.articles;
+    } else if (typeof webhookData === "object") {
+      // If it's a single object, wrap it in an array
+      newsArray = [webhookData];
     }
 
-    return pineconeResult.matches.map((match: any, index: number) => {
-      const metadata = match.metadata || {};
-      return {
-        id: match.id || `pinecone_${Date.now()}_${index}`,
-        headline: metadata.headline || metadata.title || "Tech News Alert",
-        source: metadata.source || "Global Intelligence",
+    return newsArray.map((item: any, index: number) => {
+      const transformedItem: NewsItem = {
+        id: item.id || item._id || `webhook_${Date.now()}_${index}`,
+        headline: item.headline || item.title || item.name || "Tech News Alert",
+        source:
+          item.source || item.publisher || item.author || "Tech Intelligence",
         category: this.categorizeNews(
-          metadata.category || metadata.headline || "",
+          item.category || item.type || item.tag || item.headline || "",
         ),
         summary:
-          metadata.summary ||
-          metadata.description ||
+          item.summary ||
+          item.description ||
+          item.content ||
+          item.excerpt ||
           "Latest technology development detected",
         location: this.extractLocation(
-          metadata.location || metadata.country || metadata.city,
+          item.location || item.country || item.city || item.region,
         ),
         timestamp:
-          metadata.timestamp ||
-          metadata.published_at ||
+          item.timestamp ||
+          item.published_at ||
+          item.date ||
+          item.created_at ||
           new Date().toISOString(),
-        impact: metadata.impact || "",
-        relevance_score: match.score || Math.random() * 0.3 + 0.7, // Higher relevance for Pinecone matches
-        keywords: metadata.keywords
-          ? Array.isArray(metadata.keywords)
-            ? metadata.keywords
-            : metadata.keywords.split(",")
-          : [],
-        url: metadata.url || metadata.link || "",
+        impact: item.impact || "",
+        relevance_score: this.calculateRelevanceScore(item),
+        keywords: this.extractKeywords(item),
+        url: item.url || item.link || item.source_url || "",
       };
+
+      // Generate impact analysis for items without it
+      if (!transformedItem.impact) {
+        transformedItem.impact = this.generateEnhancedImpact(transformedItem);
+      }
+
+      return transformedItem;
     });
+  }
+
+  private calculateRelevanceScore(item: any): number {
+    // Calculate relevance based on content
+    const content =
+      (item.headline || "") +
+      " " +
+      (item.summary || "") +
+      " " +
+      (item.category || "");
+    const contentLower = content.toLowerCase();
+
+    let score = 0.5; // Base score
+
+    // ADNOC-specific keywords
+    const adnocKeywords = [
+      "adnoc",
+      "abu dhabi",
+      "uae",
+      "emirates",
+      "gulf",
+      "middle east",
+    ];
+    const energyKeywords = [
+      "oil",
+      "gas",
+      "energy",
+      "petroleum",
+      "renewable",
+      "hydrogen",
+      "carbon",
+    ];
+    const techKeywords = [
+      "ai",
+      "artificial intelligence",
+      "digital",
+      "automation",
+      "iot",
+      "blockchain",
+    ];
+
+    adnocKeywords.forEach((keyword) => {
+      if (contentLower.includes(keyword)) score += 0.2;
+    });
+
+    energyKeywords.forEach((keyword) => {
+      if (contentLower.includes(keyword)) score += 0.15;
+    });
+
+    techKeywords.forEach((keyword) => {
+      if (contentLower.includes(keyword)) score += 0.1;
+    });
+
+    // Ensure score is between 0 and 1
+    return Math.min(1, Math.max(0.3, score));
+  }
+
+  private extractKeywords(item: any): string[] {
+    const keywords: string[] = [];
+
+    // Extract from existing keywords field
+    if (item.keywords) {
+      if (Array.isArray(item.keywords)) {
+        keywords.push(...item.keywords);
+      } else if (typeof item.keywords === "string") {
+        keywords.push(...item.keywords.split(",").map((k) => k.trim()));
+      }
+    }
+
+    // Extract from tags
+    if (item.tags && Array.isArray(item.tags)) {
+      keywords.push(...item.tags);
+    }
+
+    // Extract from category
+    if (item.category) {
+      keywords.push(item.category);
+    }
+
+    return keywords.filter((k) => k && k.length > 0).slice(0, 5);
   }
 
   private getEmbeddingForQuery(query: string): number[] {
