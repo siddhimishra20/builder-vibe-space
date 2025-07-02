@@ -143,27 +143,25 @@ export default function TechRadar() {
         </div>
       )}
 
-      {/* Error state */}
-      {error && (
-        <div className="absolute top-20 right-4 z-40">
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="glass-panel-alert p-4 rounded-xl border border-red-500/50 max-w-sm"
-          >
-            <h4 className="text-red-400 font-semibold text-sm mb-2">
-              Connection Warning
-            </h4>
-            <p className="text-gray-300 text-xs">{error}</p>
-            <button
-              onClick={fetchLatestNews}
-              className="mt-2 text-cyan-400 hover:text-cyan-300 text-xs underline"
-            >
-              Retry Connection
-            </button>
-          </motion.div>
-        </div>
-      )}
+      {/* Connection status */}
+      <div className="absolute top-20 right-4 z-40">
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="glass-panel p-3 rounded-xl border border-cyan-500/30 max-w-sm"
+        >
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
+            <span className="text-yellow-400 text-xs font-semibold">
+              DEMO MODE
+            </span>
+          </div>
+          <p className="text-gray-300 text-xs mt-1">
+            Using simulated tech intelligence data
+          </p>
+          {error && <p className="text-red-400 text-xs mt-1">{error}</p>}
+        </motion.div>
+      </div>
 
       <div className="relative h-full pt-16 flex">
         {/* Main map area */}
