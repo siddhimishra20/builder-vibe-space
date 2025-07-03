@@ -14,6 +14,7 @@ export const handleNewsProxy: RequestHandler = async (req, res) => {
         "ngrok-skip-browser-warning": "true",
         "User-Agent": "TechRadar-Server/1.0",
       },
+      // No timeout on server side - let it wait as long as needed
     });
 
     console.log("Webhook response status:", response.status);

@@ -219,7 +219,7 @@ export default function TechRadar() {
               : error?.includes("activation")
                 ? "N8N workflow needs to be activated"
                 : error?.includes("timeout")
-                  ? "Webhook taking too long - using demo data"
+                  ? "Webhook processing (can take up to 5min)"
                   : error?.includes("demo")
                     ? "Displaying demo intelligence data"
                     : error
@@ -233,7 +233,7 @@ export default function TechRadar() {
               {error.includes("activation")
                 ? "Click 'Execute workflow' in n8n then refresh"
                 : error.includes("timeout")
-                  ? "Webhook response time >8s - check n8n performance"
+                  ? "Webhook took more than 5 minutes - may need optimization"
                   : error.includes("demo")
                     ? "System operational - check webhook status"
                     : "Webhook returning empty/error responses"}

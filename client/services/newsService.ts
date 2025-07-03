@@ -67,8 +67,8 @@ export class NewsService {
 
         const timeoutPromise = new Promise<never>((_, reject) =>
           setTimeout(
-            () => reject(new Error("Webhook timeout - database may be slow")),
-            5000,
+            () => reject(new Error("Webhook timeout after 5 minutes")),
+            300000,
           ),
         );
 
