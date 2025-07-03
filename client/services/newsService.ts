@@ -178,7 +178,9 @@ export class NewsService {
       // Don't log as error since this is expected behavior when webhook is unavailable
       if (error instanceof Error) {
         if (error.message.includes("timeout")) {
-          console.log("→ Timeout occurred - webhook is slow");
+          console.log(
+            "→ Timeout occurred after 5 minutes - webhook may need more time",
+          );
         } else if (error.message.includes("Network error")) {
           console.log("→ Network/server connection issue");
         } else if (error.message.includes("Failed to fetch")) {
