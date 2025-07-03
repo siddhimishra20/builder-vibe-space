@@ -59,7 +59,7 @@ export class NewsService {
 
       console.log("Request headers:", requestHeaders);
 
-      // Use Promise.race for timeout instead of AbortController to avoid signal issues
+      // Use Promise.race for timeout with shorter duration for better UX
       const fetchPromise = fetch(NEWS_API_URL, {
         method: "GET",
         headers: requestHeaders,
@@ -67,8 +67,8 @@ export class NewsService {
 
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(
-          () => reject(new Error("Request timeout after 15 seconds")),
-          15000,
+          () => reject(new Error("Webhook timeout - database may be slow")),
+          8000,
         ),
       );
 
@@ -166,8 +166,11 @@ export class NewsService {
       console.error("Error fetching real data via proxy:", error);
 
       if (error instanceof Error) {
-        if (error.message.includes("timeout")) {
-          console.log("Request timeout - database may be slow to respond");
+        if (
+          error.message.includes("timeout") ||
+          error.message.includes("Webhook timeout")
+        ) {
+          console.log("Webhook timeout (8s) - using demo data for better UX");
         } else if (error.name === "AbortError") {
           console.log("Request was aborted");
         } else if (error.message.includes("Failed to fetch")) {

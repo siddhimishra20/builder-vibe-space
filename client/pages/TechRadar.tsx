@@ -63,7 +63,13 @@ export default function TechRadar() {
       }
     } catch (err) {
       console.error("Error fetching news from database:", err);
-      setError("Webhook issue - using demo data");
+
+      // Set specific error message based on error type
+      if (err instanceof Error && err.message.includes("timeout")) {
+        setError("Webhook timeout - using demo data");
+      } else {
+        setError("Webhook issue - using demo data");
+      }
 
       // Always provide functional demo data when webhook fails
       const demoData = [
@@ -219,11 +225,13 @@ export default function TechRadar() {
                 ? "CONNECTING..."
                 : error?.includes("activation")
                   ? "WEBHOOK INACTIVE"
-                  : error?.includes("demo")
-                    ? "DEMO MODE"
-                    : error
-                      ? "WEBHOOK ERROR"
-                      : "LIVE DATABASE"}
+                  : error?.includes("timeout")
+                    ? "WEBHOOK SLOW"
+                    : error?.includes("demo")
+                      ? "DEMO MODE"
+                      : error
+                        ? "WEBHOOK ERROR"
+                        : "LIVE DATABASE"}
             </span>
           </div>
           <p className="text-gray-300 text-xs mt-1">
@@ -231,21 +239,25 @@ export default function TechRadar() {
               ? "Connecting to database..."
               : error?.includes("activation")
                 ? "N8N workflow needs to be activated"
-                : error?.includes("demo")
-                  ? "Displaying demo intelligence data"
-                  : error
-                    ? "Webhook connection issue detected"
-                    : `${alerts.length} live alerts from database`}
+                : error?.includes("timeout")
+                  ? "Webhook taking too long - using demo data"
+                  : error?.includes("demo")
+                    ? "Displaying demo intelligence data"
+                    : error
+                      ? "Webhook connection issue detected"
+                      : `${alerts.length} live alerts from database`}
           </p>
           {error && (
             <p
-              className={`text-xs mt-1 ${error.includes("demo") ? "text-yellow-400" : error.includes("activation") ? "text-orange-400" : "text-red-400"}`}
+              className={`text-xs mt-1 ${error.includes("timeout") ? "text-orange-400" : error.includes("demo") ? "text-yellow-400" : error.includes("activation") ? "text-orange-400" : "text-red-400"}`}
             >
               {error.includes("activation")
                 ? "Click 'Execute workflow' in n8n then refresh"
-                : error.includes("demo")
-                  ? "System operational - check webhook status"
-                  : "Webhook returning empty/error responses"}
+                : error.includes("timeout")
+                  ? "Webhook response time >8s - check n8n performance"
+                  : error.includes("demo")
+                    ? "System operational - check webhook status"
+                    : "Webhook returning empty/error responses"}
             </p>
           )}
         </motion.div>
