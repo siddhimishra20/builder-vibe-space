@@ -163,20 +163,21 @@ export class NewsService {
         }
       }
     } catch (error) {
-      console.error("Error fetching real data via proxy:", error);
+      console.warn(
+        "Data fetch failed, using demo data:",
+        error instanceof Error ? error.message : "Unknown error",
+      );
 
+      // Don't log as error since this is expected behavior when webhook is unavailable
       if (error instanceof Error) {
-        if (
-          error.message.includes("timeout") ||
-          error.message.includes("Webhook timeout")
-        ) {
-          console.log("Webhook timeout (8s) - using demo data for better UX");
-        } else if (error.name === "AbortError") {
-          console.log("Request was aborted");
+        if (error.message.includes("timeout")) {
+          console.log("→ Timeout occurred - webhook is slow");
+        } else if (error.message.includes("Network error")) {
+          console.log("→ Network/server connection issue");
         } else if (error.message.includes("Failed to fetch")) {
-          console.log("Network error - check connection");
+          console.log("→ Express server may not be responding");
         } else {
-          console.log("Proxy connection error:", error.message);
+          console.log("→ Other connection issue");
         }
       }
     }
