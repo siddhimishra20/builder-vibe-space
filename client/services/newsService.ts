@@ -52,9 +52,6 @@ export class NewsService {
       console.log("Fetching real data from database via proxy:", NEWS_API_URL);
       console.log("Request timestamp:", new Date().toISOString());
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout for real data
-
       const requestHeaders = {
         Accept: "application/json",
         "Cache-Control": "no-cache",
@@ -62,13 +59,20 @@ export class NewsService {
 
       console.log("Request headers:", requestHeaders);
 
-      const response = await fetch(NEWS_API_URL, {
+      // Use Promise.race for timeout instead of AbortController to avoid signal issues
+      const fetchPromise = fetch(NEWS_API_URL, {
         method: "GET",
         headers: requestHeaders,
-        signal: controller.signal,
       });
 
-      clearTimeout(timeoutId);
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error("Request timeout after 15 seconds")),
+          15000,
+        ),
+      );
+
+      const response = await Promise.race([fetchPromise, timeoutPromise]);
       console.log("Proxy response received, status:", response.status);
 
       if (response.ok) {
