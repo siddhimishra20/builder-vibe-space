@@ -153,10 +153,12 @@ export class NewsService {
       console.error("Error fetching real data via proxy:", error);
 
       if (error instanceof Error) {
-        if (error.name === "AbortError") {
-          console.log(
-            "Proxy request timeout - database may be slow to respond",
-          );
+        if (error.message.includes("timeout")) {
+          console.log("Request timeout - database may be slow to respond");
+        } else if (error.name === "AbortError") {
+          console.log("Request was aborted");
+        } else if (error.message.includes("Failed to fetch")) {
+          console.log("Network error - check connection");
         } else {
           console.log("Proxy connection error:", error.message);
         }
