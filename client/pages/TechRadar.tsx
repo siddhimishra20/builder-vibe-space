@@ -46,10 +46,10 @@ export default function TechRadar() {
   });
 
   const fetchLatestNews = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+    setLoading(true);
+    setError(null);
 
+    try {
       // This will always return data (fallback if needed)
       const newsData = await newsService.fetchLatestNews();
       const transformedAlerts = newsData.map(transformNewsItemToAlert);
@@ -61,63 +61,42 @@ export default function TechRadar() {
         setActiveAlert(transformedAlerts[0]);
         setTimeout(() => setActiveAlert(null), 5000);
       }
-    } catch (err) {
-      console.error("Error fetching news from database:", err);
 
-      // Set specific error message based on error type
-      if (err instanceof Error && err.message.includes("timeout")) {
-        setError("Webhook timeout - using demo data");
-      } else {
-        setError("Webhook issue - using demo data");
+      // Check if we're using demo data based on alert content
+      const isDemoData = transformedAlerts.some(
+        (alert) =>
+          alert.headline.includes("TechRadar System") ||
+          alert.headline.includes("Global AI Investment") ||
+          alert.id.startsWith("demo_"),
+      );
+
+      if (isDemoData) {
+        setError("Connection issue - using demo data");
       }
+    } catch (err) {
+      // This should rarely happen since newsService always returns data
+      console.warn("Unexpected error in fetchLatestNews:", err);
+      setError("System issue - using demo data");
 
-      // Always provide functional demo data when webhook fails
-      const demoData = [
+      // Provide basic demo data as absolute fallback
+      const emergencyData = [
         {
-          id: "demo_1",
-          headline: "TechRadar System Operational",
+          id: "emergency_1",
+          headline: "TechRadar System Online",
           source: "System Status",
           category: "System",
-          summary: "Dashboard is functional - webhook connection pending",
+          summary: "Dashboard operational - data connection pending",
           location: { lat: 24.4539, lng: 54.3773 },
           city: "Abu Dhabi",
           country: "UAE",
           timestamp: new Date(),
-          impact: "Dashboard operational with demo intelligence data",
-        },
-        {
-          id: "demo_2",
-          headline: "Global AI Investment Surges to Record Highs",
-          source: "Tech Monitor",
-          category: "AI",
-          summary:
-            "Worldwide AI investments reach $50B in Q3, with energy sector leading adoption",
-          location: { lat: 37.7749, lng: -122.4194 },
-          city: "San Francisco",
-          country: "USA",
-          timestamp: new Date(Date.now() - 300000),
-          impact:
-            "Opportunity for ADNOC to accelerate AI initiatives and strategic partnerships",
-        },
-        {
-          id: "demo_3",
-          headline: "Breakthrough in Green Hydrogen Production Efficiency",
-          source: "Energy News",
-          category: "Energy Tech",
-          summary:
-            "New catalyst technology reduces green hydrogen production costs by 40%",
-          location: { lat: 52.52, lng: 13.405 },
-          city: "Berlin",
-          country: "Germany",
-          timestamp: new Date(Date.now() - 600000),
-          impact:
-            "Strategic technology for ADNOC's renewable energy and hydrogen initiatives",
+          impact: "System functional with basic demo data",
         },
       ];
-      setAlerts(demoData);
-    } finally {
-      setLoading(false);
+      setAlerts(emergencyData);
     }
+
+    setLoading(false);
   };
 
   const enhanceAlertWithImpact = async (alert: NewsAlert) => {
@@ -136,8 +115,8 @@ export default function TechRadar() {
   useEffect(() => {
     fetchLatestNews();
 
-    // Set up more frequent updates to get real data (every 2 minutes)
-    const interval = setInterval(fetchLatestNews, 2 * 60 * 1000);
+    // Set up less frequent retries to avoid constant failed requests (every 5 minutes)
+    const interval = setInterval(fetchLatestNews, 5 * 60 * 1000);
 
     return () => clearInterval(interval);
   }, []);
