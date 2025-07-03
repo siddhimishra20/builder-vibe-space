@@ -49,31 +49,38 @@ export class NewsService {
 
     // First, try to get real data from the database via Express proxy
     try {
-      console.log("Fetching real data from database via proxy:", NEWS_API_URL);
-      console.log("Request timestamp:", new Date().toISOString());
+      console.log("Attempting to fetch data via proxy:", NEWS_API_URL);
 
       const requestHeaders = {
         Accept: "application/json",
         "Cache-Control": "no-cache",
       };
 
-      console.log("Request headers:", requestHeaders);
+      // Wrap fetch in try-catch to handle network failures
+      let response: Response;
+      try {
+        // Use Promise.race for timeout with shorter duration for better UX
+        const fetchPromise = fetch(NEWS_API_URL, {
+          method: "GET",
+          headers: requestHeaders,
+        });
 
-      // Use Promise.race for timeout with shorter duration for better UX
-      const fetchPromise = fetch(NEWS_API_URL, {
-        method: "GET",
-        headers: requestHeaders,
-      });
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Webhook timeout - database may be slow")),
+            5000,
+          ),
+        );
 
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(
-          () => reject(new Error("Webhook timeout - database may be slow")),
-          8000,
-        ),
-      );
-
-      const response = await Promise.race([fetchPromise, timeoutPromise]);
-      console.log("Proxy response received, status:", response.status);
+        response = await Promise.race([fetchPromise, timeoutPromise]);
+        console.log("Proxy response received, status:", response.status);
+      } catch (fetchError) {
+        console.warn(
+          "Fetch failed - likely network or server issue:",
+          fetchError,
+        );
+        throw new Error("Network error - using demo data");
+      }
 
       if (response.ok) {
         // Check content type first
