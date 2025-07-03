@@ -169,6 +169,10 @@ export default function TechRadar() {
             </h3>
             <p className="text-gray-300 text-sm">
               Fetching latest global tech intelligence...
+              <br />
+              <span className="text-yellow-400 text-xs mt-2 block">
+                (Processing may take up to 5 minutes)
+              </span>
             </p>
           </motion.div>
         </div>
