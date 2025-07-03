@@ -182,13 +182,15 @@ export class NewsService {
     }
 
     // Only use fallback data as last resort
-    console.warn("Using fallback data - database proxy connection failed");
+    console.warn(
+      "Using fallback data - webhook connection failed or timed out",
+    );
     const fallbackData = this.getFallbackData();
 
-    // Cache fallback data with shorter duration to retry sooner
+    // Cache fallback data with shorter duration to retry sooner (1 minute for timeouts)
     this.cache.set(cacheKey, {
       data: fallbackData,
-      timestamp: Date.now() - this.CACHE_DURATION * 0.5, // Half cache duration
+      timestamp: Date.now() - this.CACHE_DURATION * 0.8, // Retry in 1 minute instead of 5
     });
 
     return fallbackData;
