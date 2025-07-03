@@ -69,8 +69,15 @@ export const handleNewsProxy: RequestHandler = async (req, res) => {
     console.log("Response preview:", responseText.substring(0, 200));
 
     if (!responseText || responseText.trim().length === 0) {
-      console.warn("Empty response from webhook");
-      return res.status(200).json([]);
+      console.warn(
+        "Empty response from webhook - returning structured response",
+      );
+      return res.status(200).json({
+        data: [],
+        message: "Webhook returned empty response",
+        status: "empty_response",
+        timestamp: new Date().toISOString(),
+      });
     }
 
     // Try to parse as JSON
