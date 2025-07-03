@@ -115,6 +115,12 @@ export class NewsService {
           throw new Error(`Invalid JSON response: ${parseError.message}`);
         }
 
+        // Handle empty webhook responses
+        if (rawData && rawData.status === "empty_response") {
+          console.warn("Webhook returned empty response - using fallback data");
+          throw new Error("Empty webhook response");
+        }
+
         // Transform the webhook data to our format
         const transformedData = this.transformWebhookData(rawData);
 
@@ -132,7 +138,10 @@ export class NewsService {
 
           return transformedData;
         } else {
-          console.warn("No valid news items after transformation");
+          console.warn(
+            "No valid news items after transformation - using fallback",
+          );
+          throw new Error("No valid news items");
         }
       } else {
         console.warn(
