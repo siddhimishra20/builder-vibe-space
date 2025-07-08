@@ -259,108 +259,69 @@ export class NewsService {
     }));
   }
 
-  private transformWebhookData(webhookData: any): NewsItem[] {
-    console.log("Transforming webhook data:", webhookData);
-    console.log("Webhook data type:", typeof webhookData);
+   private categorizeNews(title: string, summary: string): string {
+    const lowerTitle = title.toLowerCase();
+    const lowerSummary = summary.toLowerCase();
 
-    if (!webhookData) {
-      console.warn("Webhook data is null or undefined");
-      return [];
+    if (lowerTitle.includes('game') || lowerTitle.includes('review') || lowerTitle.includes('deltarune')) {
+      return "Gaming";
     }
-
-    // Handle different possible data structures
-    let newsArray: any[] = [];
-
-    if (Array.isArray(webhookData)) {
-      console.log("Data is array with", webhookData.length, "items");
-      newsArray = webhookData;
-    } else if (webhookData.data && Array.isArray(webhookData.data)) {
-      console.log("Data.data is array with", webhookData.data.length, "items");
-      newsArray = webhookData.data;
-    } else if (webhookData.news && Array.isArray(webhookData.news)) {
-      console.log("Data.news is array with", webhookData.news.length, "items");
-      newsArray = webhookData.news;
-    } else if (webhookData.articles && Array.isArray(webhookData.articles)) {
-      console.log(
-        "Data.articles is array with",
-        webhookData.articles.length,
-        "items",
-      );
-      newsArray = webhookData.articles;
-    } else if (webhookData.items && Array.isArray(webhookData.items)) {
-      console.log(
-        "Data.items is array with",
-        webhookData.items.length,
-        "items",
-      );
-      newsArray = webhookData.items;
-    } else if (typeof webhookData === "object" && webhookData !== null) {
-      // If it's a single object, wrap it in an array
-      console.log("Single object, wrapping in array");
-      newsArray = [webhookData];
-    } else {
-      console.warn(
-        "Unrecognized data structure:",
-        Object.keys(webhookData || {}),
-      );
-      return [];
+    if (lowerTitle.includes('ai') || lowerTitle.includes('tech')) {
+      return "Technology";
     }
+    if (lowerTitle.includes('apple') || lowerTitle.includes('google')) {
+      return "Big Tech";
+    }
+    // Add more rules as needed
+    return "General News";
+  }
 
-    if (newsArray.length === 0) {
+    private transformWebhookData(webhookData: any): NewsItem[] {
+    console.log("Transforming new webhook data structure:", webhookData);
+
+    if (!Array.isArray(webhookData)) {
+      console.warn("Webhook data is not an array, wrapping it.");
+      webhookData = [webhookData];
+    }
+    
+    if (webhookData.length === 0) {
       console.warn("News array is empty");
       return [];
     }
 
-    console.log("Processing", newsArray.length, "items");
-
-    const transformedItems = newsArray
+    const transformedItems = webhookData
       .map((item: any, index: number) => {
+        // The item here is each object from your n8n output
+        // e.g., { url: "...", title: "...", summary: "..." }
+        if (!item.url || !item.title) {
+          return null; // Skip items that don't have a URL or title
+        }
+        
         try {
-          console.log(`Processing item ${index + 1}:`, item);
-
           const transformedItem: NewsItem = {
-            id: item.id || item._id || `webhook_${Date.now()}_${index}`,
-            headline:
-              item.headline || item.title || item.name || "Tech News Alert",
-            source:
-              item.source ||
-              item.publisher ||
-              item.author ||
-              "Tech Intelligence",
-            category: this.categorizeNews(
-              item.category || item.type || item.tag || item.headline || "",
-            ),
-            summary:
-              item.summary ||
-              item.description ||
-              item.content ||
-              item.excerpt ||
-              "Latest technology development detected",
-            location: this.extractLocation(
-              item.location || item.country || item.city || item.region,
-            ),
-            timestamp:
-              item.timestamp ||
-              item.published_at ||
-              item.date ||
-              item.created_at ||
-              new Date().toISOString(),
-            impact: item.impact || "",
-            relevance_score: this.calculateRelevanceScore(item),
+            id: item.url, // Use the URL as a unique ID
+            headline: item.title,
+            source: new URL(item.url).hostname.replace('www.', ''), // Extract source from URL
+            category: this.categorizeNews(item.title, item.summary || ''),
+            summary: item.summary || "No summary available.",
+            // IMPORTANT: Your data has no location. We'll use a default fallback.
+            location: {
+              lat: 34.0522, // Los Angeles (example)
+              lng: -118.2437,
+              city: "Online",
+              country: "USA",
+            },
+            timestamp: new Date(item.published).toISOString(),
+            impact: "Impact analysis pending...", // Default impact
+            relevance_score: item.trust_score || 0.8, // Use trust_score
             keywords: this.extractKeywords(item),
-            url: item.url || item.link || item.source_url || "",
+            url: item.url,
           };
-
-          // Generate impact analysis for items without it
+          
           if (!transformedItem.impact) {
-            transformedItem.impact =
-              this.generateEnhancedImpact(transformedItem);
+            transformedItem.impact = this.generateEnhancedImpact(transformedItem);
           }
-
-          console.log(
-            `Successfully transformed item ${index + 1}:`,
-            transformedItem.headline,
-          );
+          
           return transformedItem;
         } catch (error) {
           console.error(`Error transforming item ${index + 1}:`, error, item);
@@ -370,7 +331,7 @@ export class NewsService {
       .filter((item): item is NewsItem => item !== null);
 
     console.log(
-      `Successfully transformed ${transformedItems.length} out of ${newsArray.length} items`,
+      `Successfully transformed ${transformedItems.length} items from new data source.`,
     );
     return transformedItems;
   }
