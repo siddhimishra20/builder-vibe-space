@@ -21,6 +21,7 @@ interface NewsAlert {
   relevance_score?: number;
   keywords?: string[];
   url?: string;
+  trust_score?: number; 
 }
 
 export default function TechRadar() {
